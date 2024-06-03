@@ -132,7 +132,11 @@ if __name__ == "__main__":
     batch_size = 16
 
     num_workers = batch_size if batch_size <= 16 else 16
-    num_workers = 4
+    # num_workers = 4
+    out_csv_file = os.path.join(save_dir, f'{video_file}_ball.csv')
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     # DEFINE MODELS AND LOAD WEIGTHS
     tracknet_ckpt = torch.load(tracknet_file, map_location=DEVICE)
@@ -151,7 +155,7 @@ if __name__ == "__main__":
 
     # SAMPLE FRAMES FROM THE VIDEO
     videosampler = VideoFrameSampler(video_file, video_sample_length)
-    prediction_dicts = []
+    prediction_dicts = {}
 
     for frame_list in videosampler:
         fps, w, h = videosampler.fps, videosampler.width, videosampler.height
@@ -329,6 +333,14 @@ if __name__ == "__main__":
 
 
         pred_dict = inpaint_pred_dict if inpaintnet is not None else tracknet_pred_dict
-        prediction_dicts.append(pred_dict)
+        if len(prediction_dicts.keys()) > 0:
+            for i,v in  enumerate(pred_dict['Frame']):
+                prediction_dicts['Frame'].append(v)
+                prediction_dicts['X'].append(pred_dict['X'][i])
+                prediction_dicts['Y'].append(pred_dict['Y'][i])
+                prediction_dicts['Visibility'].append(pred_dict['Visibility'][i])
+        else:
+           prediction_dicts = pred_dict.copy() 
 
     print("Predictions Completed")
+    write_pred_csv(prediction_dicts, save_file=out_csv_file)
